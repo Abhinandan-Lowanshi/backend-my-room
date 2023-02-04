@@ -11,20 +11,19 @@ const sequelize = new Sequelize(dbConfig.DB, dbConfig.USER, dbConfig.PASSWORD, {
     max: dbConfig.pool.max,
     min: dbConfig.pool.min,
     acquire: dbConfig.pool.acquire,
-    idle: dbConfig.pool.idle
+    idle: dbConfig.pool.idle,
   },
   // operatorsAliases: false
-
 });
 
 sequelize
-  .sync({ alter: false })
+  .sync({ alter: true })
   .then(() => {
     console.log("Connected to db");
   })
   .catch((err) => {
     console.log("Error:" + err);
-  })
+  });
 
 const db = {};
 
@@ -33,13 +32,16 @@ db.sequelize = sequelize;
 
 db.Users = require("./user.model.js")(sequelize, Sequelize);
 db.room_details = require("./room_details.model")(sequelize, Sequelize);
-db.images = require('./images.model')(sequelize, Sequelize);
-db.favorite = require('./favorite.model')(sequelize, Sequelize);
-db.Notification = require('./notification.model')(sequelize, Sequelize);
-db.temp = require('./temp.model')(sequelize, Sequelize);
+db.images = require("./images.model")(sequelize, Sequelize);
+db.favorite = require("./favorite.model")(sequelize, Sequelize);
+db.Notification = require("./notification.model")(sequelize, Sequelize);
+db.temp = require("./temp.model")(sequelize, Sequelize);
 
 db.Users.hasMany(db.favorite, { foreignKey: "fav_usr_fkey", as: "favorites" });
-db.room_details.hasMany(db.favorite, { foreignKey: "fav_rm_fkey", as: "favorites" });
+db.room_details.hasMany(db.favorite, {
+  foreignKey: "fav_rm_fkey",
+  as: "favorites",
+});
 
 db.favorite.belongsTo(db.Users, {
   foreignKey: "fav_usr_fkey",
@@ -51,10 +53,8 @@ db.favorite.belongsTo(db.room_details, {
   as: "room_details",
 });
 
-
 db.sequelize.sync({ force: false }).then(() => {
   console.log("Drop and re-sync db.");
 });
 
 module.exports = db;
-

@@ -1,82 +1,143 @@
 const db = require("../../models");
-const upload = require('../../services/multer');
-const asyncLoop = require('node-async-loop');
-const { room_details, images, favorite, Users, Notification } = require("../../models");
-const config = require('../../config')
+const upload = require("../../services/multer");
+const asyncLoop = require("node-async-loop");
+const {
+  room_details,
+  images,
+  favorite,
+  Users,
+  Notification,
+} = require("../../models");
+const config = require("../../config");
 const fs = require("fs");
-const path = require('path')
-const notification = require('../../public/notification')
+const path = require("path");
+const notification = require("../../public/notification");
+const { response } = require("express");
 
 let uploadImg = upload.array("Images", 10);
 
 exports.addRoom = async (req, res, next) => {
-    try {
-        let imgData = [];
+  try {
+    let imgData = [];
 
-        uploadImg(req, res, async function (err) {
-            if (err) {
-                return res.json({
-                    status: false,
-                    message: err
-                })
-            }
-
-            if (!req.files) {
-                throw "Please upload file."
-            }
-            const { rm_usr_fkey, rm_own_Fullname, rm_own_mble_num, rm_size, rm_furnisd_status,
-                rm_availble, rm_prking_avblity, rm_depndecy, rm_flor, rm_rent, rm_house_no, rm_colny, rm_city, rm_state,
-                rm_latitude, rm_longitude, rm_description } = req.body;
-
-            const files = req.files;
-            const reqData = {
-                rm_usr_fkey, rm_own_fullname: rm_own_Fullname, rm_own_mble_num, rm_size, rm_furnisd_status,
-                rm_availble, rm_prking_avblity, rm_depndecy, rm_flor, rm_rent, rm_house_no, rm_colny, rm_city, rm_state,
-                rm_latitude, rm_longitude, rm_description
-            }
-
-            await room_details.create(reqData)
-                .then(async (result) => {
-
-                    await files.forEach(async (element) => {
-
-                        let object = {
-                            img_rm_fkey: result.dataValues.rm_pkey,
-                            img_name: element.filename,
-                            img_dscptin: element.originalname
-                        }
-                        await imgData.push(object);
-                    });
-
-                    await images.bulkCreate(imgData).then(async (resullt) => {
-                        await getNearUser(result.dataValues);
-
-                        res.json({
-                            status: true,
-                            message: "details successfully inserted.",
-                        })
-                    });
-
-                }).catch((err) => { res.json({ status: false, message: 'Something went wronge.', data: {}, orignalError: err }) })
+    uploadImg(req, res, async function (err) {
+      if (err) {
+        return res.json({
+          status: false,
+          message: err,
         });
-    } catch (err) { res.json({ status: false, message: 'Something went wronge.', data: {}, orignalError: err }) }
-}
+      }
+
+      if (!req.files) {
+        throw "Please upload file.";
+      }
+      const {
+        rm_usr_fkey,
+        rm_own_Fullname,
+        rm_own_mble_num,
+        rm_size,
+        rm_furnisd_status,
+        rm_availble,
+        rm_prking_avblity,
+        rm_depndecy,
+        rm_flor,
+        rm_rent,
+        rm_house_no,
+        rm_colny,
+        rm_city,
+        rm_state,
+        rm_latitude,
+        rm_longitude,
+        rm_description,
+      } = req.body;
+
+      const files = req.files;
+      const reqData = {
+        rm_usr_fkey,
+        rm_own_fullname: rm_own_Fullname,
+        rm_own_mble_num,
+        rm_size,
+        rm_furnisd_status,
+        rm_availble,
+        rm_prking_avblity,
+        rm_depndecy,
+        rm_flor,
+        rm_rent,
+        rm_house_no,
+        rm_colny,
+        rm_city,
+        rm_state,
+        rm_latitude,
+        rm_longitude,
+        rm_description,
+      };
+
+      await room_details
+        .create(reqData)
+        .then(async (result) => {
+          await files.forEach(async (element) => {
+            let object = {
+              img_rm_fkey: result.dataValues.rm_pkey,
+              img_name: element.filename,
+              img_dscptin: element.originalname,
+            };
+            await imgData.push(object);
+          });
+
+          await images.bulkCreate(imgData).then(async (resullt) => {
+            await getNearUser(result.dataValues);
+
+            res.json({
+              status: true,
+              message: "details successfully inserted.",
+            });
+          });
+        })
+        .catch((err) => {
+          res.json({
+            status: false,
+            message: "Something went wronge.",
+            data: {},
+            orignalError: err,
+          });
+        });
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: "Something went wronge.",
+      data: {},
+      orignalError: err,
+    });
+  }
+};
 
 exports.FindRoom = async (req, res) => {
-    try {
-        const { user_id, latitude, longitude, radius } = req.body;
-        if (!user_id || user_id == "" || !latitude || latitude === "" || !longitude || longitude === "") {
-            return res.json({
-                status: false,
-                message: "Location is undefind or empty.",
-                data: {}
-            })
-        }
+  try {
+    const { user_id, latitude, longitude, radius } = req.body;
+    if (
+      !user_id ||
+      user_id == "" ||
+      !latitude ||
+      latitude === "" ||
+      !longitude ||
+      longitude === ""
+    ) {
+      return res.json({
+        status: false,
+        message: "Location is undefind or empty.",
+        data: {},
+      });
+    }
 
-        await Users.update({ usr_latitude: latitude, usr_longitude: longitude }, { where: { usr_pkey: user_id } })
+    await Users.update(
+      { usr_latitude: latitude, usr_longitude: longitude },
+      { where: { usr_pkey: user_id } }
+    );
 
-        let sql = `select 
+    let sql = `select 
         room_details.rm_pkey,
+        room_details.created_at,
         room_details.rm_usr_fkey,
         room_details.rm_own_fullname,
         room_details.rm_status,
@@ -101,362 +162,449 @@ exports.FindRoom = async (req, res) => {
         AS room_distance
         from room_details
         LEFT JOIN favorites ON room_details.rm_pkey = favorites.fav_rm_fkey
-        where rm_usr_fkey != ${user_id} and room_details.rm_status = 1 having room_distance <= ${radius};`
+        where rm_usr_fkey != ${user_id} and room_details.rm_status = 1 having room_distance <= ${radius};`;
 
-        await db.sequelize.query(sql)
-            .then(async (result) => {
-                if (result[0].length === 0) {
-                    return res.json({
-                        status: true,
-                        message: 'Room list not found.',
-                        data: []
-                    })
-                }
+    await db.sequelize
+      .query(sql)
+      .then(async (result) => {
+        if (result[0].length === 0) {
+          return res.json({
+            status: true,
+            message: "Room list not found.",
+            data: [],
+          });
+        }
 
-                // res.json(result[0])
-                await getImage(result[0], user_id, res)
-            })
-            .catch((err) => res.json({ status: false, message: "Something went wrong.", data: {} }))
-
-    } catch (err) {
-        res.json({
-            status: false,
-            message: "Something went wrong.",
-            data: {}
-        })
-    }
-}
+        // res.json(result[0])
+        await getImage(result[0], user_id, res);
+      })
+      .catch((err) =>
+        res.json({ status: false, message: "Something went wrong.", data: {} })
+      );
+  } catch (err) {
+    res.json({
+      status: false,
+      message: "Something went wrong.",
+      data: {},
+    });
+  }
+};
 
 exports.EditRoom = async (req, res) => {
-    try {
-        const { room_id, data } = req.body;
-        let room = await JSON.parse(data);
+  try {
+    const { room_id, data } = req.body;
+    let room = await JSON.parse(data);
 
-        if (Object.keys(room).length == 0 || !room_id) {
-
-            return res.json({
-                status: false,
-                message: 'Empty data is not allowed.'
-            })
-        }
-        await room_details.update(room, { where: { rm_pkey: room_id } })
-            .then((result) => {
-
-                res.json({
-                    status: true,
-                    code: 200,
-                    message: "Room details successfully updated.",
-                    data: result
-                })
-            })
-            .catch((err) => {
-                console.log(">>>!!!!", err)
-                res.json({ status: false, code: 500, message: "Something went wronge.", err: err });
-            });
-
-
-
-    } catch (err) { res.json({ status: false, message: 'Something went wrong.', oringalError: err }) }
-
-}
+    if (Object.keys(room).length == 0 || !room_id) {
+      return res.json({
+        status: false,
+        message: "Empty data is not allowed.",
+      });
+    }
+    await room_details
+      .update(room, { where: { rm_pkey: room_id } })
+      .then((result) => {
+        res.json({
+          status: true,
+          code: 200,
+          message: "Room details successfully updated.",
+          data: result,
+        });
+      })
+      .catch((err) => {
+        console.log(">>>!!!!", err);
+        res.json({
+          status: false,
+          code: 500,
+          message: "Something went wronge.",
+          err: err,
+        });
+      });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: "Something went wrong.",
+      oringalError: err,
+    });
+  }
+};
 
 exports.ViewRoom = async (req, res) => {
-    try {
-        const { user_id, room_id } = req.body;
+  try {
+    const { user_id, room_id } = req.body;
 
-        if (!room_id || room_id === undefined || room_id === null || !user_id || user_id === null) {
-            return res.json({ status: false, message: 'room id or user_id empty not allowed.' })
-        }
+    if (
+      !room_id ||
+      room_id === undefined ||
+      room_id === null ||
+      !user_id ||
+      user_id === null
+    ) {
+      return res.json({
+        status: false,
+        message: "room id or user_id empty not allowed.",
+      });
+    }
 
-        const val = await room_details.findOne({
-            include: [{
-                model: favorite,
-                as: "favorites",
-                required: false,
-                where: { fav_usr_fkey: user_id }
-            }],
-            where: { rm_pkey: room_id }
-        });
+    const val = await room_details.findOne({
+      include: [
+        {
+          model: favorite,
+          as: "favorites",
+          required: false,
+          where: { fav_usr_fkey: user_id },
+        },
+      ],
+      where: { rm_pkey: room_id },
+    });
 
-        if (!val) {
-            return res.json({
-                status: true,
-                message: 'Room details not found.',
-                data: {}
-            })
-        }
+    if (!val) {
+      return res.json({
+        status: true,
+        message: "Room details not found.",
+        data: {},
+      });
+    }
 
-        const data = await images.findAll({
-            where: { img_rm_fkey: room_id },
-            attributes: ['img_pkey', 'img_rm_fkey', [`concat('${config.HOST_NAME}',  img_name)`, 'img_name'], 'img_dscptin']
-        })
+    const data = await images.findAll({
+      where: { img_rm_fkey: room_id },
+      attributes: [
+        "img_pkey",
+        "img_rm_fkey",
+        [`concat('${config.HOST_NAME}',  img_name)`, "img_name"],
+        "img_dscptin",
+      ],
+    });
 
-        return res.json({
-            status: true,
-            message: 'Room details get successfully.',
-            data: {
-                "rm_pkey": val.rm_pkey,
-                "rm_usr_fkey": val.rm_usr_fkey,
-                "rm_own_Fullname": val.rm_own_fullname,
-                "rm_own_mble_num": val.rm_own_mble_num,
-                "rm_size": val.rm_size,
-                "rm_furnisd_status": val.rm_furnisd_status,
-                "rm_availble": val.rm_availble,
-                "rm_prking_avblity": val.rm_prking_avblity,
-                "rm_depndecy": val.rm_depndecy,
-                "rm_flor": val.rm_flor,
-                "rm_rent": val.rm_rent,
-                "rm_house_no": val.rm_house_no.toString(),
-                "rm_colny": val.rm_colny,
-                "rm_city": val.rm_city,
-                "rm_state": val.rm_state,
-                "rm_latitude": val.rm_latitude.toString(),
-                "rm_longitude": val.rm_longitude.toString(),
-                "rm_description": val.rm_description,
-                "rm_status": val?.rm_status == 1 ? "true" : "false",
-                "favorite_key": val.favorites.length === 0 ? false : true,
-                "images": data
-            }
-        })
-
-
-    } catch (err) { res.json({ status: false, message: 'Something went wrong.', oringalError: err }) }
-}
+    return res.json({
+      status: true,
+      message: "Room details get successfully.",
+      data: {
+        rm_pkey: val.rm_pkey,
+        rm_usr_fkey: val.rm_usr_fkey,
+        rm_own_Fullname: val.rm_own_fullname,
+        rm_own_mble_num: val.rm_own_mble_num,
+        rm_size: val.rm_size,
+        rm_furnisd_status: val.rm_furnisd_status,
+        rm_availble: val.rm_availble,
+        rm_prking_avblity: val.rm_prking_avblity,
+        rm_depndecy: val.rm_depndecy,
+        rm_flor: val.rm_flor,
+        rm_rent: val.rm_rent,
+        rm_house_no: val.rm_house_no.toString(),
+        rm_colny: val.rm_colny,
+        rm_city: val.rm_city,
+        rm_state: val.rm_state,
+        rm_latitude: val.rm_latitude.toString(),
+        rm_longitude: val.rm_longitude.toString(),
+        rm_description: val.rm_description,
+        rm_status: val?.rm_status == 1 ? true : false,
+        favorite_key: val.favorites.length === 0 ? false : true,
+        images: data,
+      },
+    });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: "Something went wrong.",
+      oringalError: err,
+    });
+  }
+};
 
 exports.deleteRoom = async (req, res) => {
-    try {
-        const { room_id } = req.body;
+  try {
+    const { room_id } = req.body;
 
-        await favorite.destroy({ where: { fav_rm_fkey: room_id } });
-        const imageData = await images.findAll({ where: { img_rm_fkey: room_id }, attributes: ['img_name'] })
-        console.log("imageData.length", imageData.length)
-        if (imageData.length === 0) {
-            return res.json({
-                status: false,
-                message: "Room details not found.",
-            })
-        }
-
-        asyncLoop(imageData, async (val, next) => {
-            fs.unlinkSync("./uploads/" + val?.dataValues?.img_name + "");
-            next();
-        }, async () => {
-
-            await images.destroy({ where: { img_rm_fkey: room_id } });
-            const roomData = await room_details.destroy({ where: { rm_pkey: room_id } });
-            res.json({
-                status: true,
-                message: "Room successfully deleted.",
-                data: roomData
-            })
-        })
-    } catch (err) {
-        res.json({ status: false, message: 'Something went wrong.', orignalError: err })
+    await favorite.destroy({ where: { fav_rm_fkey: room_id } });
+    const imageData = await images.findAll({
+      where: { img_rm_fkey: room_id },
+      attributes: ["img_name"],
+    });
+    console.log("imageData.length", imageData.length);
+    if (imageData.length === 0) {
+      return res.json({
+        status: false,
+        message: "Room details not found.",
+      });
     }
-}
+
+    asyncLoop(
+      imageData,
+      async (val, next) => {
+        fs.unlinkSync("./uploads/" + val?.dataValues?.img_name + "");
+        next();
+      },
+      async () => {
+        await images.destroy({ where: { img_rm_fkey: room_id } });
+        const roomData = await room_details.destroy({
+          where: { rm_pkey: room_id },
+        });
+        res.json({
+          status: true,
+          message: "Room successfully deleted.",
+          data: roomData,
+        });
+      }
+    );
+  } catch (err) {
+    res.json({
+      status: false,
+      message: "Something went wrong.",
+      orignalError: err,
+    });
+  }
+};
 exports.MyRoomList = async (req, res) => {
-    try {
-        const { user_id } = req.body;
+  try {
+    const { user_id } = req.body;
 
-        if (!user_id || user_id === '' || user_id === undefined) {
-            return res.json({
-                status: false,
-                message: 'All feild must be required.'
-            })
-        }
-        await room_details.findAll({
-            include: ['favorites'],
-            where: { rm_usr_fkey: user_id },
-            order: [
-                ['createdAt', 'DESC'],
-            ],
-        }).then((result) => {
-            if (result === null || result.length === 0) {
-                return res.json({
-                    status: true,
-                    message: 'Room list is empty.',
-                    data: []
-                })
-            }
-            mYRoomListImage(result, res);
-        })
-    } catch (err) {
-        res.json({ status: false, message: 'Something went wrong.', orignalError: err })
+    if (!user_id || user_id === "" || user_id === undefined) {
+      return res.json({
+        status: false,
+        message: "All feild must be required.",
+      });
     }
-}
+    await room_details
+      .findAll({
+        include: ["favorites"],
+        where: { rm_usr_fkey: user_id },
+        order: [["createdAt", "DESC"]],
+      })
+      .then((result) => {
+        if (result === null || result.length === 0) {
+          return res.json({
+            status: true,
+            message: "Room list is empty.",
+            data: [],
+          });
+        }
+        mYRoomListImage(result, res);
+      });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: "Something went wrong.",
+      orignalError: err,
+    });
+  }
+};
 
 exports.updateRoomStatus = async (req, res) => {
-    try {
+  try {
+    const { room_id, status_type } = req.body;
 
-        const { room_id, status_type } = req.body;
-
-        if (!room_id || room_id == '' || room_id === undefined || status_type === undefined) {
-            return res.json({
-                status: false,
-                message: 'All feild must be required.'
-            })
-        }
-
-
-        await room_details.update({
-            rm_status: status_type
-        }, { where: { rm_pkey: room_id } })
-            .then((result) => {
-
-                res.json({
-                    status: true,
-                    code: 200,
-                    message: "Room status successfully updated."
-                })
-            })
-            .catch((err) => {
-                console.log(">>>!!!!", err)
-                res.json({ status: false, code: 500, message: "Something went wronge.", err: err });
-            });
-
-    } catch (err) {
-        res.json({ status: false, message: "Something went wrong.", orignalError: err })
+    if (
+      !room_id ||
+      room_id == "" ||
+      room_id === undefined ||
+      status_type === undefined
+    ) {
+      return res.json({
+        status: false,
+        message: "All feild must be required.",
+      });
     }
-}
+
+    await room_details
+      .update(
+        {
+          rm_status: status_type,
+        },
+        { where: { rm_pkey: room_id } }
+      )
+      .then((result) => {
+        res.json({
+          status: true,
+          code: 200,
+          message: "Room status successfully updated.",
+        });
+      })
+      .catch((err) => {
+        console.log(">>>!!!!", err);
+        res.json({
+          status: false,
+          code: 500,
+          message: "Something went wronge.",
+          err: err,
+        });
+      });
+  } catch (err) {
+    res.json({
+      status: false,
+      message: "Something went wrong.",
+      orignalError: err,
+    });
+  }
+};
+
+exports.getLatest = async (req, res) => {
+  try {
+    let { userId } = req.body;
+    let data = await Users.findAll();
+    res.json(data);
+  } catch (err) {
+    console.log(err);
+  }
+};
 
 const getImage = (data, user_id, res) => {
+  const roomList = [];
 
-    const roomList = [];
+  asyncLoop(
+    data,
+    async (val, next) => {
+      const data = await images.findAll({
+        where: { img_rm_fkey: val.rm_pkey },
+        attributes: [
+          "img_pkey",
+          "img_rm_fkey",
+          [`concat('${config.HOST_NAME}',  img_name)`, "img_name"],
+          "img_dscptin",
+        ],
+      });
 
-    asyncLoop(data, async (val, next) => {
+      let object = {
+        rm_pkey: val.rm_pkey,
+        created_at: val.created_at,
+        rm_usr_fkey: val.rm_usr_fkey,
+        rm_own_Fullname: val.rm_own_fullname,
+        rm_own_mble_num: val.rm_own_mble_num,
+        rm_size: val.rm_size,
+        rm_furnisd_status: val.rm_furnisd_status,
+        rm_availble: val.rm_availble,
+        rm_prking_avblity: val.rm_prking_avblity,
+        rm_depndecy: val.rm_depndecy,
+        rm_flor: val.rm_flor,
+        rm_rent: val.rm_rent,
+        rm_house_no: val.rm_house_no,
+        rm_colny: val.rm_colny,
+        rm_city: val.rm_city,
+        rm_state: val.rm_state,
+        rm_latitude: val.rm_latitude,
+        rm_longitude: val.rm_longitude,
+        rm_description: val.rm_description,
+        favorite_key: val?.favorite_key == user_id ? true : false,
+        rm_status: val?.rm_status == 1 ? true : false,
+        room_distance: val?.room_distance ? val?.room_distance.toString() : "",
+        images: data,
+      };
 
-        const data = await images.findAll({
-            where: { img_rm_fkey: val.rm_pkey },
-            attributes: ['img_pkey', 'img_rm_fkey', [`concat('${config.HOST_NAME}',  img_name)`, 'img_name'], 'img_dscptin']
-        })
-
-        let object = {
-            "rm_pkey": val.rm_pkey,
-            "rm_usr_fkey": val.rm_usr_fkey,
-            "rm_own_Fullname": val.rm_own_fullname,
-            "rm_own_mble_num": val.rm_own_mble_num,
-            "rm_size": val.rm_size,
-            "rm_furnisd_status": val.rm_furnisd_status,
-            "rm_availble": val.rm_availble,
-            "rm_prking_avblity": val.rm_prking_avblity,
-            "rm_depndecy": val.rm_depndecy,
-            "rm_flor": val.rm_flor,
-            "rm_rent": val.rm_rent,
-            "rm_house_no": val.rm_house_no,
-            "rm_colny": val.rm_colny,
-            "rm_city": val.rm_city,
-            "rm_state": val.rm_state,
-            "rm_latitude": val.rm_latitude,
-            "rm_longitude": val.rm_longitude,
-            "rm_description": val.rm_description,
-            "favorite_key": val?.favorite_key == user_id ? "true" : "false",
-            "rm_status": val?.rm_status == 1 ? "true" : "false",
-            "room_distance": val?.room_distance ? val?.room_distance.toString() : "",
-            "images": data
-        }
-
-        roomList.push(object);
-        next();
-    }, () => {
-        res.json({
-            status: true,
-            code: 200,
-            message: "Room list successfully get.",
-            data: roomList
-        })
-
-    })
-
-
-
-}
+      roomList.push(object);
+      next();
+    },
+    () => {
+      res.json({
+        status: true,
+        code: 200,
+        message: "Room list successfully get.",
+        data: roomList,
+      });
+    }
+  );
+};
 
 const mYRoomListImage = (data, res) => {
+  const roomList = [];
 
-    const roomList = [];
+  asyncLoop(
+    data,
+    async (val, next) => {
+      console.log(val);
+      const data = await images.findAll({
+        where: { img_rm_fkey: val.rm_pkey },
+        attributes: [
+          "img_pkey",
+          "img_rm_fkey",
+          [`concat('${config.HOST_NAME}',  img_name)`, "img_name"],
+          "img_dscptin",
+        ],
+      });
 
-    asyncLoop(data, async (val, next) => {
+      let object = {
+        rm_pkey: val.rm_pkey,
+        created_at: val.createdAt,
+        rm_usr_fkey: val.rm_usr_fkey,
+        rm_own_Fullname: val.rm_own_fullname,
+        rm_own_mble_num: val.rm_own_mble_num,
+        rm_size: val.rm_size,
+        rm_furnisd_status: val.rm_furnisd_status,
+        rm_availble: val.rm_availble,
+        rm_prking_avblity: val.rm_prking_avblity,
+        rm_depndecy: val.rm_depndecy,
+        rm_flor: val.rm_flor,
+        rm_rent: val.rm_rent,
+        rm_house_no: val.rm_house_no,
+        rm_colny: val.rm_colny,
+        rm_city: val.rm_city,
+        rm_state: val.rm_state,
+        rm_latitude: val.rm_latitude,
+        rm_longitude: val.rm_longitude,
+        rm_description: val.rm_description,
+        favorite_key: val?.favorites.length == 0 ? false : true,
+        rm_status: val?.rm_status == 1 ? true : false,
+        room_distance: val?.room_distance ? val?.room_distance.toString() : "",
+        images: data,
+      };
 
-        const data = await images.findAll({
-            where: { img_rm_fkey: val.rm_pkey },
-            attributes: ['img_pkey', 'img_rm_fkey', [`concat('${config.HOST_NAME}',  img_name)`, 'img_name'], 'img_dscptin']
-        })
-
-        let object = {
-            "rm_pkey": val.rm_pkey,
-            "rm_usr_fkey": val.rm_usr_fkey,
-            "rm_own_Fullname": val.rm_own_fullname,
-            "rm_own_mble_num": val.rm_own_mble_num,
-            "rm_size": val.rm_size,
-            "rm_furnisd_status": val.rm_furnisd_status,
-            "rm_availble": val.rm_availble,
-            "rm_prking_avblity": val.rm_prking_avblity,
-            "rm_depndecy": val.rm_depndecy,
-            "rm_flor": val.rm_flor,
-            "rm_rent": val.rm_rent,
-            "rm_house_no": val.rm_house_no,
-            "rm_colny": val.rm_colny,
-            "rm_city": val.rm_city,
-            "rm_state": val.rm_state,
-            "rm_latitude": val.rm_latitude,
-            "rm_longitude": val.rm_longitude,
-            "rm_description": val.rm_description,
-            "favorite_key": val?.favorites.length == 0 ? "false" : "true",
-            "rm_status": val?.rm_status == 1 ? "true" : "false",
-            "room_distance": val?.room_distance ? val?.room_distance.toString() : "",
-            "images": data
-        }
-
-        roomList.push(object);
-        next();
-    }, () => {
-        res.json({
-            status: true,
-            code: 200,
-            message: "Room list successfully get.",
-            data: roomList
-        })
-
-    })
-}
+      roomList.push(object);
+      next();
+    },
+    () => {
+      res.json({
+        status: true,
+        code: 200,
+        message: "Room list successfully get.",
+        data: roomList,
+      });
+    }
+  );
+};
 
 const getNearUser = async (roomDetails) => {
-
-    let sql = `select 
+  let sql = `select 
     users.usr_pkey,
     users.device_token,
     (6371 * acos( cos( radians( ${roomDetails.rm_latitude} ) )
-    * cos( radians( users.usr_latitude ) ) * cos( radians( users.usr_longitude ) - radians( ${roomDetails.rm_longitude} ) ) + sin( radians(${roomDetails.rm_latitude}) ) * sin( radians( users.usr_latitude ) ) ) ) 
+    * cos( radians( users.usr_latitude ) ) * cos( radians( users.usr_longitude ) - radians( ${
+      roomDetails.rm_longitude
+    } ) ) + sin( radians(${
+    roomDetails.rm_latitude
+  }) ) * sin( radians( users.usr_latitude ) ) ) ) 
     AS user_distance
     from users
-    where users.is_notify = 1 and usr_pkey != ${roomDetails.rm_usr_fkey} having user_distance <= ${10};`
+    where users.is_notify = 1 and usr_pkey != ${
+      roomDetails.rm_usr_fkey
+    } having user_distance <= ${10};`;
 
-    let uploadNotification = []
+  let uploadNotification = [];
 
-    const payload = {
-        title: `${roomDetails.rm_size} has uploaded at ${roomDetails.rm_colny} .`,
-        rm_pkey: roomDetails.rm_pkey,
-        rm_size: roomDetails.rm_size,
-        rm_furnisd_status: roomDetails.rm_furnisd_status,
-        rm_usr_fkey: roomDetails.rm_usr_fkey,
-    }
-    db.sequelize.query(sql).then(async (result) => {
-        let androidTokens = []
-        if (result[0].length > 0) {
-            result[0].forEach(async (data) => {
-                let obj = {
-                    userId: data.usr_pkey,
-                    title: payload.title,
-                    payload: payload,
-                }
-                await uploadNotification.push(obj);
-                await androidTokens.push(data.device_token);
-            });
-            await notification.sendAndroidNotification(androidTokens, payload)
-
-        }
-        await Notification.bulkCreate(uploadNotification);
-
-    }).catch((err) => { console.log("err", err) })
-
-}
+  const payload = {
+    title: `${roomDetails.rm_size} has uploaded at ${roomDetails.rm_colny} .`,
+    rm_pkey: roomDetails.rm_pkey,
+    rm_size: roomDetails.rm_size,
+    rm_furnisd_status: roomDetails.rm_furnisd_status,
+    rm_usr_fkey: roomDetails.rm_usr_fkey,
+  };
+  db.sequelize
+    .query(sql)
+    .then(async (result) => {
+      let androidTokens = [];
+      if (result[0].length > 0) {
+        result[0].forEach(async (data) => {
+          let obj = {
+            userId: data.usr_pkey,
+            title: payload.title,
+            payload: payload,
+          };
+          await uploadNotification.push(obj);
+          await androidTokens.push(data.device_token);
+        });
+        await notification.sendAndroidNotification(androidTokens, payload);
+      }
+      await Notification.bulkCreate(uploadNotification);
+    })
+    .catch((err) => {
+      console.log("err", err);
+    });
+};
