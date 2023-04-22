@@ -9,7 +9,6 @@ let {
 } = require("../Controllers/auth");
 let { userController } = require("../Controllers/user");
 let { notifyController } = require("../Controllers/notification");
-let { ctUserConrtoller } = require('../Controllers/chat')
 
 router.post("/register", registerController.register);
 router.post("/sendEmailOtp", registerController.sendVerifyMail);
@@ -89,12 +88,5 @@ router.post(
   jwtHelper.verifyAccessToken,
   roomController.getLatest
 );
-
-router.post('/chatUserList',
-  jwtHelper.verifyAccessToken,
-  ctUserConrtoller.chatUserList);
-router.post('/chatList',
-  jwtHelper.verifyAccessToken,
-  ctUserConrtoller.chatList);
 
 module.exports = router;

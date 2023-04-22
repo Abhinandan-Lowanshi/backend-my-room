@@ -36,8 +36,14 @@ db.images = require("./images.model")(sequelize, Sequelize);
 db.favorite = require("./favorite.model")(sequelize, Sequelize);
 db.Notification = require("./notification.model")(sequelize, Sequelize);
 db.temp = require("./temp.model")(sequelize, Sequelize);
+db.chatBuddies = require("./chat_buddies.model.js")(sequelize, Sequelize);
+db.userChat = require("./user_chat.model.js")(sequelize, Sequelize);
 
 db.Users.hasMany(db.favorite, { foreignKey: "fav_usr_fkey", as: "favorites" });
+db.Users.hasMany(db.userChat, { foreignKey: "user_id", as: "user_chats" });
+db.Users.hasMany(db.chatBuddies, { foreignKey: "user_id", as: "chat_buddies" });
+
+
 db.room_details.hasMany(db.favorite, {
   foreignKey: "fav_rm_fkey",
   as: "favorites",
@@ -52,6 +58,17 @@ db.favorite.belongsTo(db.room_details, {
   foreignKey: "fav_rm_fkey",
   as: "room_details",
 });
+
+db.userChat.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "users",
+})
+
+db.chatBuddies.belongsTo(db.Users, {
+  foreignKey: "user_id",
+  as: "users",
+})
+
 
 db.sequelize.sync({ force: false }).then(() => {
   console.log("Drop and re-sync db.");
