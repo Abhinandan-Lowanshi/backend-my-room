@@ -9,9 +9,10 @@ let {
 } = require("../Controllers/auth");
 let { userController } = require("../Controllers/user");
 let { notifyController } = require("../Controllers/notification");
-let { ctUserConrtoller } = require('../Controllers/chat')
+let { ctUserConrtoller } = require("../Controllers/chat");
 
 router.post("/register", registerController.register);
+router.post("/socialLogin", loginController.socialLogin);
 router.post("/sendEmailOtp", registerController.sendVerifyMail);
 router.post("/verifyEmailotp", registerController.EmailVerifyOtp);
 router.post("/login", loginController.login);
@@ -36,6 +37,11 @@ router.post(
 );
 
 router.post("/addRoom", jwtHelper.verifyAccessToken, roomController.addRoom);
+router.post(
+  "/addReview",
+  jwtHelper.verifyAccessToken,
+  roomController.addReview
+);
 router.post("/findRoom", jwtHelper.verifyAccessToken, roomController.FindRoom);
 router.post("/editRoom", jwtHelper.verifyAccessToken, roomController.EditRoom);
 router.post(
@@ -90,11 +96,15 @@ router.post(
   roomController.getLatest
 );
 
-router.post('/chatUserList',
+router.post(
+  "/chatUserList",
   jwtHelper.verifyAccessToken,
-  ctUserConrtoller.chatUserList);
-router.post('/chatList',
+  ctUserConrtoller.chatUserList
+);
+router.post(
+  "/chatList",
   jwtHelper.verifyAccessToken,
-  ctUserConrtoller.chatList);
+  ctUserConrtoller.chatList
+);
 
 module.exports = router;

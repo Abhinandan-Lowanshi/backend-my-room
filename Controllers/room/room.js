@@ -7,12 +7,15 @@ const {
   favorite,
   Users,
   Notification,
+  rating,
 } = require("../../models");
 const config = require("../../config");
 const fs = require("fs");
 const path = require("path");
 const notification = require("../../public/notification");
 const { response } = require("express");
+const { count } = require("console");
+const { getRatting } = require("./commonFuction/CommonFuctions");
 
 let uploadImg = upload.array("Images", 10);
 
@@ -49,6 +52,7 @@ exports.addRoom = async (req, res, next) => {
         rm_latitude,
         rm_longitude,
         rm_description,
+        deposit,
       } = req.body;
 
       const files = req.files;
@@ -70,6 +74,7 @@ exports.addRoom = async (req, res, next) => {
         rm_latitude,
         rm_longitude,
         rm_description,
+        deposit,
       };
 
       await room_details
@@ -81,6 +86,7 @@ exports.addRoom = async (req, res, next) => {
               img_name: element.filename,
               img_dscptin: element.originalname,
             };
+            console.log(object, "object");
             await imgData.push(object);
           });
 
@@ -156,6 +162,7 @@ exports.FindRoom = async (req, res) => {
         room_details.rm_latitude,
         room_details.rm_longitude,
         room_details.rm_description,
+        room_details.deposit,
         favorites.fav_usr_fkey as favorite_key,
         (6371 * acos( cos( radians( ${latitude} ) )
         * cos( radians( room_details.rm_latitude ) ) * cos( radians( room_details.rm_longitude ) - radians( ${longitude} ) ) + sin( radians(${latitude}) ) * sin( radians( room_details.rm_latitude ) ) ) ) 
@@ -321,7 +328,7 @@ exports.deleteRoom = async (req, res) => {
       where: { img_rm_fkey: room_id },
       attributes: ["img_name"],
     });
-    console.log("imageData.length", imageData.length);
+    // console.log("imageData.length", imageData.length);
     if (imageData.length === 0) {
       return res.json({
         status: false,
@@ -379,7 +386,7 @@ exports.MyRoomList = async (req, res) => {
             data: [],
           });
         }
-        mYRoomListImage(result, res);
+        mYRoomListImage(result, res, user_id);
       });
   } catch (err) {
     res.json({
@@ -463,7 +470,8 @@ const getImage = (data, user_id, res) => {
           "img_dscptin",
         ],
       });
-
+      let reviews = {};
+      reviews = await getRatting(val?.rm_pkey, user_id);
       let object = {
         rm_pkey: val.rm_pkey,
         created_at: val.created_at,
@@ -484,10 +492,12 @@ const getImage = (data, user_id, res) => {
         rm_latitude: val.rm_latitude,
         rm_longitude: val.rm_longitude,
         rm_description: val.rm_description,
+        deposit: val.deposit,
         favorite_key: val?.favorite_key == user_id ? true : false,
         rm_status: val?.rm_status == 1 ? true : false,
         room_distance: val?.room_distance ? val?.room_distance.toString() : "",
         images: data,
+        reviews,
       };
 
       roomList.push(object);
@@ -504,13 +514,13 @@ const getImage = (data, user_id, res) => {
   );
 };
 
-const mYRoomListImage = (data, res) => {
+const mYRoomListImage = (data, res, user_id) => {
   const roomList = [];
 
   asyncLoop(
     data,
     async (val, next) => {
-      console.log(val);
+      // console.log(val);
       const data = await images.findAll({
         where: { img_rm_fkey: val.rm_pkey },
         attributes: [
@@ -520,7 +530,8 @@ const mYRoomListImage = (data, res) => {
           "img_dscptin",
         ],
       });
-
+      let reviews = {};
+      reviews = await getRatting(val?.rm_pkey, user_id);
       let object = {
         rm_pkey: val.rm_pkey,
         created_at: val.createdAt,
@@ -541,10 +552,12 @@ const mYRoomListImage = (data, res) => {
         rm_latitude: val.rm_latitude,
         rm_longitude: val.rm_longitude,
         rm_description: val.rm_description,
+        deposit: val.deposit,
         favorite_key: val?.favorites.length == 0 ? false : true,
         rm_status: val?.rm_status == 1 ? true : false,
         room_distance: val?.room_distance ? val?.room_distance.toString() : "",
         images: data,
+        reviews,
       };
 
       roomList.push(object);
@@ -607,4 +620,101 @@ const getNearUser = async (roomDetails) => {
     .catch((err) => {
       console.log("err", err);
     });
+};
+
+exports.addReview = async (req, res) => {
+  try {
+    const { room_id, user_id, review, ratingCount = 0, user_name } = req.body;
+    let sql = `select * from ratings where rm_usr_fkey = ${user_id} and room_id =${room_id}`;
+
+    if (!room_id) {
+      res.json({
+        status: false,
+        message: "Room id can't be empty",
+        data: {},
+      });
+      return;
+    }
+    if (!user_id) {
+      res.json({
+        status: false,
+        message: "User id can't be empty",
+        data: {},
+      });
+      return;
+    }
+    if (!review) {
+      res.json({
+        status: false,
+        message: "Review can't be empty",
+        data: {},
+      });
+      return;
+    }
+    // if (!ratingCount) {
+    //   res.json({
+    //     status: false,
+    //     message: "Rating can't be empty",
+    //     data: {},
+    //   });
+    //   return;
+    // }
+    if (!user_name) {
+      res.json({
+        status: false,
+        message: "Username can't be empty",
+        data: {},
+      });
+      return;
+    }
+    await db.sequelize
+      .query(sql)
+      .then(async (result) => {
+        if (result[0]?.length > 0) {
+          return res.json({
+            status: false,
+            message: "You cant rate twice",
+          });
+        } else {
+          const reqData = {
+            room_id,
+            rm_usr_fkey: user_id,
+            review,
+            ratings: ratingCount,
+            user_name,
+          };
+          await rating
+            .create(reqData)
+            .then(async (result) => {
+              res.json({
+                status: true,
+                message: "Review add successfully",
+                data: result,
+              });
+            })
+            .catch((err) => {
+              res.json({
+                status: false,
+                message: "Something went wrong.",
+                data: {},
+                orignalError: err,
+              });
+            });
+        }
+      })
+      .catch((err) =>
+        res.json({
+          status: false,
+          message: "Something went wrong.",
+          data: {},
+        })
+      );
+  } catch (err) {
+    console.log("err", err);
+    res.json({
+      status: false,
+      message: "Something went wrong.",
+      data: err,
+    });
+  }
 };

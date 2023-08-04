@@ -1,14 +1,14 @@
 const express = require("express");
 const router = express.Router();
 const jwtHelper = require("../helper/jwthelper");
-let { roomController, favController } = require("../Controllers/room");
+let { roomController, favController } = require("../../Controllers/room");
 let {
   registerController,
   loginController,
   forgetController,
-} = require("../Controllers/auth");
-let { userController } = require("../Controllers/user");
-let { notifyController } = require("../Controllers/notification");
+} = require("../../Controllers/auth");
+let { userController } = require("../../Controllers/user");
+let { notifyController } = require("../../Controllers/notification");
 
 router.post("/register", registerController.register);
 router.post("/sendEmailOtp", registerController.sendVerifyMail);
@@ -35,6 +35,11 @@ router.post(
 );
 
 router.post("/addRoom", jwtHelper.verifyAccessToken, roomController.addRoom);
+router.post(
+  "/addReview",
+  jwtHelper.verifyAccessToken,
+  roomController.addReview
+);
 router.post("/findRoom", jwtHelper.verifyAccessToken, roomController.FindRoom);
 router.post("/editRoom", jwtHelper.verifyAccessToken, roomController.EditRoom);
 router.post(

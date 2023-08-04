@@ -2,6 +2,7 @@ const asyncLoop = require("node-async-loop");
 const { images, favorite } = require("../../models");
 const config = require("../../config");
 const Sequelize = require("sequelize");
+const { getRatting } = require("./commonFuction/CommonFuctions");
 const Op = Sequelize.Op;
 
 exports.Tofavorite = async (req, res) => {
@@ -113,7 +114,7 @@ exports.FavroiteList = async (req, res) => {
     if (!user_id || user_id === "" || user_id === undefined) {
       return res.json({
         status: false,
-        message: "All feild must be required.",
+        message: "All field must be required.",
       });
     }
 
@@ -131,7 +132,7 @@ exports.FavroiteList = async (req, res) => {
             data: [],
           });
         }
-        getImage(result, res);
+        getImage(result, res, user_id);
       });
   } catch (err) {
     res.json({
@@ -142,7 +143,7 @@ exports.FavroiteList = async (req, res) => {
   }
 };
 
-const getImage = (data, res) => {
+const getImage = (data, res, user_id) => {
   const roomList = [];
 
   asyncLoop(
@@ -157,6 +158,8 @@ const getImage = (data, res) => {
           "img_dscptin",
         ],
       });
+      let reviews = {};
+      reviews = await getRatting(val?.room_details?.rm_pkey, user_id);
 
       let object = {
         rm_pkey: val?.room_details?.rm_pkey,
@@ -175,6 +178,7 @@ const getImage = (data, res) => {
         rm_house_no: val?.room_details?.rm_house_no.toString(),
         rm_colny: val?.room_details?.rm_colny,
         rm_city: val?.room_details?.rm_city,
+        deposit: val?.room_details?.deposit,
         rm_state: val?.room_details?.rm_state,
         rm_description: val?.room_details?.rm_description,
         rm_latitude: val?.room_details?.rm_latitude.toString(),
@@ -183,6 +187,7 @@ const getImage = (data, res) => {
         rm_status: val?.room_details?.rm_status == 1 ? true : false,
         room_distance: val?.room_details?.room_distance,
         images: data,
+        reviews: reviews,
       };
 
       roomList.push(object);
