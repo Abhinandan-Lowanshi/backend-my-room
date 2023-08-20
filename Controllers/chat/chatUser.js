@@ -65,7 +65,8 @@ exports.chatList = async (req, res) => {
          created_date,
          ('sent') as message_type
          FROM user_chats 
-         WHERE user_id = ${user_id} AND buddy_id = ${buddy_id} ORDER BY created_date DESC LIMIT ${limit} OFFSET ${offset};`;
+         WHERE user_id = ${user_id} AND buddy_id = ${buddy_id} ORDER BY created_date DESC`;
+    //  WHERE user_id = ${user_id} AND buddy_id = ${buddy_id} ORDER BY created_date DESC LIMIT ${limit} OFFSET ${offset};`;
 
     let sql2 = `SELECT
          user_id,
@@ -73,7 +74,8 @@ exports.chatList = async (req, res) => {
          created_date,
          ('received') as message_type
          FROM user_chats
-         WHERE user_id = ${buddy_id} AND buddy_id = ${user_id} ORDER BY created_date DESC LIMIT ${limit} OFFSET ${offset};`;
+         WHERE user_id = ${buddy_id} AND buddy_id = ${user_id} ORDER BY created_date DESC`;
+    //  WHERE user_id = ${buddy_id} AND buddy_id = ${user_id} ORDER BY created_date DESC LIMIT ${limit} OFFSET ${offset};`;
 
     db.sequelize
       .query(sql1)

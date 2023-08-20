@@ -41,7 +41,7 @@ exports.sendVerifyMail = async (req, res) => {
           res.json({
             status: false,
             code: 401,
-            message: "something went wronge.",
+            message: "something went wrong.",
             origenalError: error,
           });
         });
@@ -102,6 +102,8 @@ exports.register = async (req, res) => {
       prmntAddress,
       password,
       device_token,
+      loginType,
+      social_token,
     } = req.body;
 
     if (!firstName) {
@@ -134,6 +136,8 @@ exports.register = async (req, res) => {
       usr_currentAdrss: currentAdrs,
       usr_pasword: encoded,
       device_token,
+      loginType,
+      social_token,
     };
 
     const emailExists = await User.findOne({
@@ -217,8 +221,23 @@ const sendOtpMail = async (UserEmail, otp, res) => {
   let mailOptions = {
     from: "<no-reply>@myRoom.com",
     to: UserEmail,
-    subject: "OTP from My Room",
-    text: `This is you OTP to verify email - ${otp}`,
+    subject: "Your One-Time Password (OTP) from MyRoom",
+    text: `Dear user,
+
+    Thank you for choosing MyRoom for your services. To ensure the security of your account, we have generated a One-Time Password (OTP) for you. Please use the following OTP to verify your identity:
+    
+    OTP: ${otp}
+    
+    Please enter this OTP on the verification page to proceed. Remember that this OTP is valid for a limited time and for a single use only.
+    
+    If you did not request this OTP or have any concerns about your account's security, please contact our support team immediately at myrooms997@gmail.com.
+    
+    Thank you for trusting MyRoom for your needs.
+    
+    Best regards,
+    
+    MyRoom
+    myrooms997@gmail.com`,
   };
 
   transporter.sendMail(mailOptions, function (error, info) {

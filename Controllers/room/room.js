@@ -53,6 +53,7 @@ exports.addRoom = async (req, res, next) => {
         rm_longitude,
         rm_description,
         deposit,
+        monthly_maintain,
       } = req.body;
 
       const files = req.files;
@@ -75,6 +76,7 @@ exports.addRoom = async (req, res, next) => {
         rm_longitude,
         rm_description,
         deposit,
+        monthly_maintain,
       };
 
       await room_details
@@ -163,6 +165,7 @@ exports.FindRoom = async (req, res) => {
         room_details.rm_longitude,
         room_details.rm_description,
         room_details.deposit,
+        room_details.monthly_maintain,
         favorites.fav_usr_fkey as favorite_key,
         (6371 * acos( cos( radians( ${latitude} ) )
         * cos( radians( room_details.rm_latitude ) ) * cos( radians( room_details.rm_longitude ) - radians( ${longitude} ) ) + sin( radians(${latitude}) ) * sin( radians( room_details.rm_latitude ) ) ) ) 
@@ -200,16 +203,15 @@ exports.FindRoom = async (req, res) => {
 exports.EditRoom = async (req, res) => {
   try {
     const { room_id, data } = req.body;
-    let room = await JSON.parse(data);
-
-    if (Object.keys(room).length == 0 || !room_id) {
+    console.log(data);
+    if (Object.keys(data).length == 0 || !room_id) {
       return res.json({
         status: false,
         message: "Empty data is not allowed.",
       });
     }
     await room_details
-      .update(room, { where: { rm_pkey: room_id } })
+      .update(data, { where: { rm_pkey: room_id } })
       .then((result) => {
         res.json({
           status: true,
@@ -305,6 +307,8 @@ exports.ViewRoom = async (req, res) => {
         rm_latitude: val.rm_latitude.toString(),
         rm_longitude: val.rm_longitude.toString(),
         rm_description: val.rm_description,
+        deposit: val.deposit,
+        monthly_maintain: val.monthly_maintain,
         rm_status: val?.rm_status == 1 ? true : false,
         favorite_key: val.favorites.length === 0 ? false : true,
         images: data,
@@ -493,6 +497,7 @@ const getImage = (data, user_id, res) => {
         rm_longitude: val.rm_longitude,
         rm_description: val.rm_description,
         deposit: val.deposit,
+        monthly_maintain: val.monthly_maintain,
         favorite_key: val?.favorite_key == user_id ? true : false,
         rm_status: val?.rm_status == 1 ? true : false,
         room_distance: val?.room_distance ? val?.room_distance.toString() : "",
@@ -553,6 +558,7 @@ const mYRoomListImage = (data, res, user_id) => {
         rm_longitude: val.rm_longitude,
         rm_description: val.rm_description,
         deposit: val.deposit,
+        monthly_maintain: val.monthly_maintain,
         favorite_key: val?.favorites.length == 0 ? false : true,
         rm_status: val?.rm_status == 1 ? true : false,
         room_distance: val?.room_distance ? val?.room_distance.toString() : "",

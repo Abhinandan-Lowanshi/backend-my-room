@@ -179,6 +179,7 @@ const getImage = (data, res, user_id) => {
         rm_colny: val?.room_details?.rm_colny,
         rm_city: val?.room_details?.rm_city,
         deposit: val?.room_details?.deposit,
+        monthly_maintain: val?.room_details?.monthly_maintain,
         rm_state: val?.room_details?.rm_state,
         rm_description: val?.room_details?.rm_description,
         rm_latitude: val?.room_details?.rm_latitude.toString(),

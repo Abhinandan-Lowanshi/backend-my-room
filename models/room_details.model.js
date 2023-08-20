@@ -37,6 +37,10 @@ module.exports = (sequelize, Sequelize) => {
         type: Sequelize.STRING(50),
         allowNull: false,
       },
+      monthly_maintain: {
+        type: Sequelize.STRING(50),
+        allowNull: false,
+      },
       rm_furnisd_status: {
         type: Sequelize.STRING(50),
         allowNull: false,
