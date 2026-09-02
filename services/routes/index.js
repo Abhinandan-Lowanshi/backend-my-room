@@ -1,18 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const jwtHelper = require("../helper/jwthelper");
-let { roomController, favController } = require("../Controllers/room");
+let { roomController, favController } = require("../../Controllers/room");
 let {
   registerController,
   loginController,
   forgetController,
-} = require("../Controllers/auth");
-let { userController } = require("../Controllers/user");
-let { notifyController } = require("../Controllers/notification");
-let { ctUserConrtoller } = require("../Controllers/chat");
+} = require("../../Controllers/auth");
+let { userController } = require("../../Controllers/user");
+let { notifyController } = require("../../Controllers/notification");
 
 router.post("/register", registerController.register);
-router.post("/socialLogin", loginController.socialLogin);
 router.post("/sendEmailOtp", registerController.sendVerifyMail);
 router.post("/verifyEmailotp", registerController.EmailVerifyOtp);
 router.post("/login", loginController.login);
@@ -94,17 +92,6 @@ router.post(
   "/getLatest",
   jwtHelper.verifyAccessToken,
   roomController.getLatest
-);
-
-router.post(
-  "/chatUserList",
-  jwtHelper.verifyAccessToken,
-  ctUserConrtoller.chatUserList
-);
-router.post(
-  "/chatList",
-  jwtHelper.verifyAccessToken,
-  ctUserConrtoller.chatList
 );
 
 module.exports = router;
